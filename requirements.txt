@@ -1,0 +1,6 @@
+yt-dlp>=2024.1.0
+faster-whisper>=1.0.0
+ollama>=0.1.0
+ffmpeg-python>=0.2.0
+requests>=2.31.0
+pytubefix>=8.0.0

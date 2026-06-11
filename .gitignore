@@ -40,6 +40,10 @@ transcript.json
 *.swp
 *.swo
 
+# YouTube OAuth credentials (sensitive — never commit these)
+token.json
+client_secret.json
+
 # OS
 .DS_Store
 Thumbs.db

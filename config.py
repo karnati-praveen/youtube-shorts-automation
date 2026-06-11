@@ -12,3 +12,6 @@ CAPTION_COLOR = "white"
 CAPTION_OUTLINE_COLOR = "black"
 CAPTION_OUTLINE_WIDTH = 3
 CAPTION_POSITION = "bottom-center"
+
+# YouTube upload defaults (used with --upload flag)
+UPLOAD_PRIVACY = "private"   # "public", "private", or "unlisted"

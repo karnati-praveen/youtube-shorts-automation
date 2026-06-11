@@ -15,6 +15,13 @@ def main():
     parser.add_argument("--clips", type=int, default=3, help="Number of shorts to generate")
     parser.add_argument("--output", default="./output", help="Output directory")
     parser.add_argument("--keep-temp", action="store_true", help="Keep intermediate files for debugging")
+    parser.add_argument("--upload", action="store_true", help="Upload finished shorts to YouTube")
+    parser.add_argument(
+        "--privacy",
+        choices=["public", "private", "unlisted"],
+        default=None,
+        help="YouTube privacy for uploaded shorts (default from config: UPLOAD_PRIVACY)",
+    )
     args = parser.parse_args()
 
     # Ensure modules are importable from this directory
@@ -25,10 +32,22 @@ def main():
     from modules.analyzer import analyze_excitement
     from modules.clipper import extract_clips
     from modules.captioner import add_captions
+    from modules.uploader import upload_short, is_configured as upload_configured
+
+    from config import UPLOAD_PRIVACY
+
+    if args.upload and not upload_configured():
+        print("YouTube upload not configured. Run: python youtube_setup.py")
+        sys.exit(1)
+
+    privacy = args.privacy or UPLOAD_PRIVACY
 
     print("\nYouTube Shorts Automation")
     print(f"URL: {args.url}")
-    print(f"Generating {args.clips} shorts\n")
+    print(f"Generating {args.clips} shorts", end="")
+    if args.upload:
+        print(f" (will upload as {privacy})", end="")
+    print("\n")
 
     # Step 1: Download
     print("[1/5] Downloading video...")
@@ -86,6 +105,32 @@ def main():
         except OSError:
             pass
 
+    # Step 6: Upload to YouTube (optional)
+    uploaded_urls = []
+    if args.upload:
+        total_steps = 6
+        print(f"[6/{total_steps}] Uploading to YouTube ({privacy})...")
+        for i, (clip_path, window) in enumerate(zip(final_clips, clip_windows)):
+            # Use AI-generated hook as title; fall back to source title
+            hook = (window.get("hook") or "").strip()
+            short_title = (hook or f"{title} — Short #{i + 1}")[:100]
+            short_desc = window.get("reason", "").strip()
+
+            try:
+                vid_id = upload_short(
+                    clip_path,
+                    title=short_title,
+                    description=short_desc,
+                    privacy=privacy,
+                    tags=[w for w in title.split() if len(w) > 3],
+                )
+                url = f"https://www.youtube.com/shorts/{vid_id}"
+                uploaded_urls.append(url)
+                print(f"   [{i + 1}] {url}")
+            except Exception as e:
+                print(f"   [{i + 1}] Upload failed: {e}")
+
+    steps_done = 6 if args.upload else 5
     print(f"\nDone! {len(final_clips)} shorts saved to {args.output}/{video_id}/")
     for p in final_clips:
         try:
@@ -93,6 +138,11 @@ def main():
             print(f"   {os.path.basename(p)} ({size:.1f} MB)")
         except OSError:
             print(f"   {os.path.basename(p)}")
+
+    if uploaded_urls:
+        print(f"\nUploaded {len(uploaded_urls)} short(s) to YouTube:")
+        for url in uploaded_urls:
+            print(f"   {url}")
 
 
 if __name__ == "__main__":
